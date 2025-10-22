@@ -1,0 +1,100 @@
+%%R
+# Load libraries
+library(ggplot2)
+library(scales)
+
+# Enrichment Data
+enrichment_data <- data.frame(
+  Terms = c(
+    "GnRH secretion",
+    "Cholinergic synapse",
+    "Gastric acid secretion",
+    "ECM-receptor interaction",
+    "Oxytocin signaling pathway",
+    "Morphine addiction",
+    "Circadian entrainment",
+    "AGE-RAGE signaling pathway in diabetic complications",
+    "Serotonergic synapse",
+    "Dopaminergic synapse"
+  ),
+  p_value = c(6.67E-08, 6.64E-07, 1.47E-05, 2.28E-05, 1.21E-04,
+              1.55E-03, 1.75E-03, 1.86E-03, 2.37E-03, 3.22E-03),
+  q_value = c(0.000003, 0.000015, 0.00022, 0.000257, 0.001089,
+              0.010476, 0.010476, 0.010476, 0.011848, 0.012967),
+  Overlap_genes = c(
+    "[KCNJ5, KCNJ6, KCNJ11, SPP1]",
+    "[KCNJ6, KCNJ12, KCNQ1, KCNQ3]",
+    "[KCNJ10, KCNQ1, KCNJ1]",
+    "[FN1, SPP1, CD44]",
+    "[KCNJ5, KCNJ6, KCNJ12]",
+    "[KCNJ5, KCNJ6]",
+    "[KCNJ5, KCNJ6]",
+    "[SERPINE1, FN1]",
+    "[KCNJ5, KCNJ6]",
+    "[KCNJ5, KCNJ6]"
+  )
+)
+
+# Extract gene count
+enrichment_data$gene_count <- sapply(strsplit(gsub("\\[|\\]", "", enrichment_data$Overlap_genes), ",\\s*"), length)
+
+# Enhanced dot plot
+dot_plot <- ggplot(enrichment_data,
+                   aes(x = -log10(p_value),
+                       y = reorder(Terms, -log10(p_value)),
+                       size = gene_count,
+                       color = -log10(p_value))) +
+  geom_point(alpha = 0.9) +
+  scale_size_continuous(
+    range = c(3, 12),
+    breaks = 1:max(enrichment_data$gene_count),
+    labels = as.integer
+  ) +
+  scale_color_gradientn(
+    colors = c("#4575b4", "#91bfdb", "#fee090", "#fc8d59", "#d73027"),
+    name = expression(-log[10](p~value))
+  ) +
+  labs(
+    title = "KEGG Pathway Enrichment Analysis",
+    x = expression(-log[10](p~value)),
+    y = "Pathway",
+    size = "Gene Count"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18, color = "black"),
+    axis.text.y = element_text(size = 12, color = "black"),
+    axis.text.x = element_text(size = 12, color = "black"),
+    axis.title = element_text(size = 14, color = "black"),
+    panel.grid.major = element_line(color = "grey90"),
+    panel.grid.minor = element_blank(),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 12)
+  ) +
+  guides(
+    color = guide_colorbar(order = 2, barwidth = 1.2, barheight = 10),
+    size = guide_legend(order = 1)
+  )
+
+# Display
+print(dot_plot)
+# code for lollipop plot
+# Save high-quality images 
+ggsave("enrichment_dot_plot_highres.png", plot = dot_plot, width = 12, height = 7, dpi = 600)
+lollipop_plot <- ggplot(enrichment_data,
+       aes(x = reorder(Terms, -log10(p_value)),
+           y = -log10(p_value))) +
+  geom_segment(aes(xend = Terms, y = 0, yend = -log10(p_value)),
+               color = "grey60", size = 1) +
+  geom_point(aes(size = gene_count, color = -log10(p_value)), alpha = 0.9) +
+  coord_flip() +
+  scale_color_gradientn(colors = c("#4575b4", "#fee090", "#d73027")) +
+  labs(title = "Lollipop Plot of KEGG Pathway Enrichment",
+       x = "Pathway", y = expression(-log[10](p~value)),
+       color = "Significance", size = "Gene Count") +
+  theme_minimal(base_size = 14)
+
+ggsave("KEGG_Lollipop_Enrichment.png",
+       plot = lollipop_plot,
+       width = 10, height = 7, dpi = 600)
+
